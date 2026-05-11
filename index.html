@@ -68,6 +68,70 @@ input:focus,select:focus,textarea:focus{border-color:rgba(251,113,133,.42);box-s
 .lock-panel{margin-top:16px}
 @keyframes teaseShine{0%{transform:translateX(-120%)}45%,100%{transform:translateX(120%)}}
 
+
+/* v4 choice feedback upgrade */
+.immersive-choice{
+  transition:transform .22s ease, border-color .22s ease, background .22s ease, box-shadow .22s ease, opacity .22s ease;
+}
+.immersive-choice.selected{
+  border-color:rgba(251,113,133,.78);
+  background:linear-gradient(145deg,rgba(153,27,27,.42),rgba(8,8,14,.76));
+  box-shadow:0 0 0 1px rgba(251,113,133,.22),0 18px 46px rgba(225,29,72,.28);
+  transform:scale(1.018);
+}
+.immersive-choice.selected:after{
+  content:"선택됨";
+  position:absolute;
+  right:12px;
+  top:12px;
+  font-size:10px;
+  font-weight:900;
+  color:#fff;
+  background:linear-gradient(135deg,#991b1b,#e11d48);
+  border-radius:999px;
+  padding:5px 8px;
+  box-shadow:0 8px 24px rgba(225,29,72,.35);
+}
+.immersive-choice.disabled{pointer-events:none;opacity:.42;}
+.immersive-choice.disabled.selected{opacity:1;}
+.flow-step{animation:questionIn .34s ease both;}
+.flow-step.leaving{animation:questionOut .22s ease both;}
+.immersive-panel.switching:after{
+  background:linear-gradient(180deg,rgba(0,0,0,.12),rgba(0,0,0,.34) 28%,rgba(0,0,0,.82) 58%,rgba(0,0,0,.96));
+}
+.step-feedback{
+  position:absolute;
+  z-index:6;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%) scale(.94);
+  opacity:0;
+  pointer-events:none;
+  background:rgba(8,8,14,.78);
+  border:1px solid rgba(251,113,133,.32);
+  backdrop-filter:blur(16px);
+  border-radius:999px;
+  padding:12px 16px;
+  color:#fff;
+  font-size:13px;
+  font-weight:900;
+  box-shadow:0 18px 50px rgba(0,0,0,.38),0 0 34px rgba(225,29,72,.18);
+}
+.immersive-panel.switching .step-feedback{animation:feedbackPop .62s ease both;}
+@keyframes questionIn{
+  from{opacity:0;transform:translateY(18px);filter:blur(4px)}
+  to{opacity:1;transform:translateY(0);filter:blur(0)}
+}
+@keyframes questionOut{
+  to{opacity:0;transform:translateY(-10px);filter:blur(3px)}
+}
+@keyframes feedbackPop{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.88)}
+  24%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  78%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}
+}
+
 </style>
 </head>
 <body>
@@ -112,6 +176,7 @@ input:focus,select:focus,textarea:focus{border-color:rgba(251,113,133,.42);box-s
 <section class="section" style="padding-top:28px"><div class="section-head"><h2>무료 미리보기</h2><small id="stepLabel">1 / 6</small></div>
 <div class="input-panel immersive-wrap">
 <div class="immersive-panel" id="questionPanel" style="--qimage:url('images/card_hidden_feelings.png')">
+<div class="step-feedback" id="stepFeedback">선택이 저장됐어요</div>
 <div class="immersive-top"><div class="immersive-label" id="topicLabel">그 사람 속마음</div><div class="immersive-step" id="stepPill">1 / 6</div></div>
 <div class="immersive-content">
 <div class="flow-progress"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
@@ -252,9 +317,9 @@ function selectProduct(name){selectedTopic=name;go('read');resetFlow(false);toas
 function chooseTopic(name){selectedTopic=name;go('read');resetFlow(false);}
 function setQuestionImage(){const panel=document.getElementById('questionPanel');const label=document.getElementById('topicLabel');const data=topicImages[selectedTopic]||topicImages['그 사람 속마음 사주'];if(panel){panel.style.setProperty('--qimage',`url('${data[0]}')`);}if(label){label.textContent=data[1];}}
 function renderDynamicStep(n){if(n>=6)return;const data=getSet()[n-1];const el=document.getElementById('step'+n);if(!el||!data)return;el.innerHTML=`<div class="immersive-question">${data.t}</div><p class="immersive-desc">${data.d}</p><div class="immersive-choices">${data.c.map(choice=>`<button class="immersive-choice" onclick="pick('s${n}','${choice[0]}')"><strong>${choice[0]}</strong><span>${choice[1]}</span></button>`).join('')}</div>`;}
-function setStep(n){currentStep=n;setQuestionImage();if(n<6)renderDynamicStep(n);document.querySelectorAll('.flow-step').forEach(s=>s.style.display='none');document.getElementById('step'+n).style.display='block';document.getElementById('stepLabel').textContent=n+' / 6';document.getElementById('stepPill').textContent=n+' / 6';document.querySelectorAll('.flow-progress i').forEach((bar,idx)=>bar.classList.toggle('on',idx<n));renderSummary();window.scrollTo({top:0,behavior:'smooth'});} 
+function setStep(n){currentStep=n;setQuestionImage();if(n<6)renderDynamicStep(n);document.querySelectorAll('.flow-step').forEach(s=>{s.style.display='none';s.classList.remove('leaving');});const step=document.getElementById('step'+n);step.style.display='block';step.style.animation='none';step.offsetHeight;step.style.animation='';document.getElementById('stepLabel').textContent=n+' / 6';document.getElementById('stepPill').textContent=n+' / 6';document.getElementById('stepPill').animate([{transform:'scale(1.18)',boxShadow:'0 0 24px rgba(251,113,133,.32)'},{transform:'scale(1)',boxShadow:'none'}],{duration:360,easing:'ease-out'});document.querySelectorAll('.flow-progress i').forEach((bar,idx)=>bar.classList.toggle('on',idx<n));renderSummary();const panel=document.getElementById('questionPanel');if(panel)panel.scrollIntoView({behavior:'smooth',block:'start'});} 
 function renderSummary(){const s=document.getElementById('summary');const labels=getSet().map(x=>x.t.replace(/\?$/,''));const items=[];if(selectedTopic)items.push(['선택한 해석',selectedTopic]);['s1','s2','s3','s4','s5'].forEach((k,i)=>{if(flow[k])items.push([labels[i]||('선택 '+(i+1)),flow[k]]);});if(items.length<=1){s.style.display='none';return;}s.style.display='grid';s.innerHTML=items.map(([k,v])=>`<div>${k}<b>${v}</b></div>`).join('');}
-function pick(key,value){flow[key]=value;const stepNum=parseInt(key.replace('s',''),10);renderSummary();setTimeout(()=>setStep(stepNum+1),180);} 
+function pick(key,value,btn){flow[key]=value;const stepNum=parseInt(key.replace('s',''),10);const panel=document.getElementById('questionPanel');const current=document.getElementById('step'+stepNum);if(btn){btn.classList.add('selected');btn.closest('.immersive-choices')?.querySelectorAll('.immersive-choice').forEach(b=>{if(b!==btn)b.classList.add('disabled');});}const feedback=document.getElementById('stepFeedback');if(feedback){feedback.textContent='선택이 저장됐어요';}if(panel){panel.classList.add('switching');}if(current){setTimeout(()=>current.classList.add('leaving'),430);}renderSummary();setTimeout(()=>{if(panel)panel.classList.remove('switching');setStep(stepNum+1);},760);} 
 function resetFlow(clear=true){if(clear){selectedTopic='그 사람 속마음 사주';}flow={s1:'',s2:'',s3:'',s4:'',s5:''};document.getElementById('result').classList.remove('show');setStep(1);} 
 function formatBirthInput(el){let v=(el.value||'').replace(/\D/g,'').slice(0,8);if(v.length>4&&v.length<=6){v=v.slice(0,4)+'-'+v.slice(4);}else if(v.length>6){v=v.slice(0,4)+'-'+v.slice(4,6)+'-'+v.slice(6);}el.value=v;} 
 async function analyze(){const name=document.getElementById('name').value.trim();const birth=document.getElementById('birthRaw').value.trim();const target=document.getElementById('target').value.trim()||'그 사람';const memo=document.getElementById('question').value.trim();if(!name||birth.length!==10){toast('이름과 생년월일 8자리를 입력해주세요.');return;}document.getElementById('loading').classList.add('show');setTimeout(()=>{document.getElementById('loading').classList.remove('show');const rb=document.getElementById('resultBody');document.getElementById('resultTitle').textContent=name+'님의 '+selectedTopic+' 미리보기';const labels=getSet().map(x=>x.t.replace(/\?$/,''));const teaserA=`${target}의 반응은 아직 끝난 쪽보다, 다시 흔들릴 여지를 더 많이 남기고 있습니다.`;const teaserB=`하지만 이 흐름이 바로 결과로 이어지는 건 아니에요. 지금 가장 중요한 건, 상대가 어느 순간에 감정을 숨기는 쪽으로 돌아서는가입니다.`;const visibleA=`${name}님이 고른 <b>${flow.s1}</b>의 단서는 현재 관계의 중심축이 어디에 놓여 있는지 보여줍니다. 특히 <b>${flow.s2}</b> 쪽으로 기운이 기울어 있기 때문에, 겉으로는 조용해 보여도 안쪽 흐름은 아직 진행 중입니다. <span class='cliff'>문제는 이 다음 장면에서 상대가 왜 갑자기 다른 태도를 보이느냐는 점이에요.</span>`;const visibleB=`또 하나 중요한 건 <b>${flow.s3}</b>라는 신호입니다. 이건 단순한 호감이나 미련만으로 설명되기보다, 타이밍과 감정의 밀도를 함께 읽어야 하는 흐름이에요. <span class='cliff'>그리고 여기서 더 중요한 건, ${flow.s4}에 대한 답이 생각보다 한쪽으로만 기울지 않는다는 점입니다.</span>`;rb.innerHTML=`<div class='visible-insight'><h4>첫 번째 흐름</h4><p>${visibleA}</p></div><div class='lock-tease'><div class='tease-tag'>잠금</div><h4>상대가 숨기는 진짜 이유</h4><p>${teaserA} ${teaserB}</p></div><div class='visible-insight'><h4>두 번째 흐름</h4><p>${visibleB}</p></div><div class='lock-tease'><div class='tease-tag'>잠금</div><h4>가장 위험한 선택과 타이밍</h4><p>지금 먼저 움직일 경우 관계가 풀리는지, 오히려 멀어지는지는 <b>${flow.s5}</b>과 연결됩니다. 특히 ${selectedTopic}에서는 한 번의 표현보다, 그 표현이 들어가는 시점이 훨씬 더 치명적일 수 있습니다. 이 다음 결론이 사실상 핵심이에요.</p></div><div class='lock-panel'><strong>전체 해석 열기</strong><p>당신이 먼저 보고 싶은 핵심은 <b>${flow.s5}</b>입니다. 전체 해석에서는 선택한 카테고리에 맞춰 상대의 흐름, 타이밍, 위험 신호, 가능성을 더 깊게 이어서 봅니다.</p><div style='font-family:"Noto Serif KR",serif;font-size:30px;font-weight:900;margin:6px 0 14px;color:#fff'>₩9,900</div><button class='btn btn-primary' onclick="toast('정식 결제 연동 전 데모 화면입니다.')">지불화면으로 이동</button><button class='btn btn-ghost' style='width:100%;margin-top:10px' onclick='resetFlow()'>처음부터 다시 선택</button></div>`;document.getElementById('result').classList.add('show');document.getElementById('result').scrollIntoView({behavior:'smooth',block:'start'});},1000)}
